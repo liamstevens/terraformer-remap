@@ -35,12 +35,16 @@ def reader(path):
             if "resource" in line:
                 #take resource, convert identifier to string with identifier syntax
                 #and pass to tfResource initialiser
-                resource_list.append(tfResource(line[9:].replace('"','').replace(' ','.')))
+                resource_list.append((each,tfResource(line[9:].replace('"','').replace(' ','.'))))
             elif "data" in line:
                 #Do the same with data objects
-                data_list.append(tfResource(line[4:].replace('"','').replace(' ','.')))
+                data_list.append((each,tfResource(line[4:].replace('"','').replace(' ','.'))))
             else:
                 pass
     
     return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
 
+
+def rename_objects(hcl_file,resources,data):
+
+    return
