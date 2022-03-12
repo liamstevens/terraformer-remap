@@ -22,10 +22,10 @@ def reader(path):
             for file in os.listdir(dir):
                 if file.endswith(".tf"):
                     #get all hcl files
-                    hcl_files.append(os.path.join(root,name))
+                    hcl_files.append(os.path.join(root,file))
                 elif file.endswith(".state"):
                     #get statefile - there should only be one of these
-                    statefile = os.path.join(root,name)
+                    statefile = os.path.join(root,file)
     for each in hcl_files:
         contents = open(each, "r").readlines()
         for line in contents:
