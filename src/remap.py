@@ -16,6 +16,7 @@ class tfResource:
 def reader(path):
     hcl_files = []
     resource_list = []
+    data_list = []
     # walk target directory
     for root, dirs, files in os.walk(path):
         for dir in dirs:
@@ -25,6 +26,8 @@ def reader(path):
                     hcl_files.append(os.path.join(root,file))
                 elif file.endswith(".state"):
                     #get statefile - there should only be one of these
+                    #TODO - figure out wtf I was thinking including these since they are incredibly 
+                    #verbose and may not *actually* be useful for this
                     statefile = os.path.join(root,file)
     for each in hcl_files:
         contents = open(each, "r").readlines()
@@ -33,5 +36,11 @@ def reader(path):
                 #take resource, convert identifier to string with identifier syntax
                 #and pass to tfResource initialiser
                 resource_list.append(tfResource(line[9:].replace('"','').replace(' ','.')))
-
+            elif "data" in line:
+                #Do the same with data objects
+                data_list.append(tfResource(line[4:].replace('"','').replace(' ','.')))
+            else:
+                pass
+    
+    return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
 
