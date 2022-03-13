@@ -44,6 +44,8 @@ def reader(path):
     
     return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
 
+def parse_schema(schema_file):
+    #
 
 def rename_objects(hcl_file,resources,data):
 
