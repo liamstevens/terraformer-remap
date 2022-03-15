@@ -45,7 +45,17 @@ def reader(path):
     return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
 
 def parse_schema(schema_file):
-    #
+    '''
+    Parse a Terraform provider schema file for resources and their schema in order to generate resource addresses.
+
+        Parameters:
+            schema_file (string) - path to the generated schema file. May contain multiple provider schemas
+        
+        Returns:
+            schema (dict) - a dict containing a mapping of resource types and their most human-readable attribute field.
+    '''
+    blob = json.load(open(schema_file,'r'))
+    
 
 def rename_objects(hcl_file,resources,data):
 
