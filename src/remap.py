@@ -1,5 +1,7 @@
-import os, sys
+import os
+import sys
 import json
+import re
 
 class tfResource:
     def _init__(self, fromaddr, toaddr=None):
@@ -45,6 +47,7 @@ def reader(path):
     return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
 
 def parse_schema(schema_file):
+    name_re = re.compile(".*n|Name.*",flags=re.IGNORECASE)
     '''
     Parse a Terraform provider schema file for resources and their schema in order to generate resource addresses.
 
@@ -54,8 +57,15 @@ def parse_schema(schema_file):
         Returns:
             schema (dict) - a dict containing a mapping of resource types and their most human-readable attribute field.
     '''
+    ret = {}
     blob = json.load(open(schema_file,'r'))
-    
+    schema_list = [e["resource_schemas"] for e in blob["provider_schemas"]]
+    for resource in schema_list:
+        attributes = schema_list[resource]["block"]["attributes"]
+        nameAttr = [e for e in attributes if name_re.match(e)]
+        bestName = min(nameAttr,key=len)
+        ret[resource] = bestName
+    return ret
 
 def rename_objects(hcl_file,resources,data):
 
