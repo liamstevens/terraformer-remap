@@ -4,10 +4,15 @@ import sys
 import json
 import re
 
+
+#TODO - need to change to use raw string as import - resource type, id, etc.
 class tfResource:
-    def _init__(self, fromaddr, toaddr=None):
-        self.fromaddr = fromaddr
-        self.toaddr = toaddr
+    def _init__(self, fromaddr, hcl, toaddr=None, type=None ):
+        self.full_from = fromaddr
+        self.full_to = toaddr
+        self.type = type
+        self.hcl = hcl
+        
     
     def generate_moved_block(self):
         self.lines = []
@@ -15,6 +20,14 @@ class tfResource:
         self.lines.append("from = "+self.fromaddr+"\n")
         self.lines.append("to = "+self.toaddr+"\n")
         self.lines.append("}\n\n")
+
+
+    def __str__(self):
+        if type=="resource":
+            self.fromaddr = self.full_from[9:].replace('"','').replace(' ','.')
+        elif type=="data":
+            self.fromaddr = self.full_from[4:].replace('"','').replace(' ','.')
+        self.toaddr = toaddr
 
 def reader(path):
     hcl_files = []
@@ -68,10 +81,11 @@ def parse_schema(schema_file):
             bestName = min(nameAttr,key=len)
             ret[resource] = bestName
         except Exception as e:
-            print(e)
+            print(e," "+resource)
             continue
     return ret
 
-def rename_objects(hcl_file,resources,data):
+def rename_objects(hcl_file,resources,data,parsed_schema):
+        for file in hcl_file:
 
     return
