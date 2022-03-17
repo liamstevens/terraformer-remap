@@ -1,3 +1,4 @@
+#from msilib import schema
 import os
 import sys
 import json
@@ -59,7 +60,17 @@ def parse_schema(schema_file):
     '''
     ret = {}
     blob = json.load(open(schema_file,'r'))
-    schema_list = [e["resource_schemas"] for e in blob["provider_schemas"]]
+    print(len(blob["provider_schemas"]))
+    print(type(blob["provider_schemas"]["registry.terraform.io/hashicorp/aws"]["resource_schemas"]))
+    schema_list = [ blob["provider_schemas"][provider][schema][resource] for provider in blob["provider_schemas"] for schema in blob["provider_schemas"][provider] for resource in blob["provider_schemas"][provider][schema]]
+                #[resource 
+                #    for resource in schema
+                #    for schema in provider 
+                #    for provider in blob["provider_schemas"] 
+                #    for resource in schema for schema in blob["provider_schema"][provider]]
+    #[ schema for provider in blob["provider_schemas"] for schema in blob["provider_schemas"][provider] ]
+    print(schema_list)
+    #[  e["resource_schemas"] for e in blob["provider_schemas"] ]
     for resource in schema_list:
         attributes = schema_list[resource]["block"]["attributes"]
         nameAttr = [e for e in attributes if name_re.match(e)]
