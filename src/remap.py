@@ -48,7 +48,7 @@ def reader(path):
     return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
 
 def parse_schema(schema_file):
-    name_re = re.compile(".*n|Name.*",flags=re.IGNORECASE)
+    name_re = re.compile(".*(n|N)ame.*",flags=re.IGNORECASE)
     '''
     Parse a Terraform provider schema file for resources and their schema in order to generate resource addresses.
 
@@ -60,22 +60,16 @@ def parse_schema(schema_file):
     '''
     ret = {}
     blob = json.load(open(schema_file,'r'))
-    print(len(blob["provider_schemas"]))
-    print(type(blob["provider_schemas"]["registry.terraform.io/hashicorp/aws"]["resource_schemas"]))
-    schema_list = [ blob["provider_schemas"][provider][schema][resource] for provider in blob["provider_schemas"] for schema in blob["provider_schemas"][provider] for resource in blob["provider_schemas"][provider][schema]]
-                #[resource 
-                #    for resource in schema
-                #    for schema in provider 
-                #    for provider in blob["provider_schemas"] 
-                #    for resource in schema for schema in blob["provider_schema"][provider]]
-    #[ schema for provider in blob["provider_schemas"] for schema in blob["provider_schemas"][provider] ]
-    print(schema_list)
-    #[  e["resource_schemas"] for e in blob["provider_schemas"] ]
-    for resource in schema_list:
-        attributes = schema_list[resource]["block"]["attributes"]
-        nameAttr = [e for e in attributes if name_re.match(e)]
-        bestName = min(nameAttr,key=len)
-        ret[resource] = bestName
+    schema_dict = {resource:blob["provider_schemas"][provider][schema][resource] for provider in blob["provider_schemas"] for schema in blob["provider_schemas"][provider] for resource in blob["provider_schemas"][provider][schema]}
+    for resource in schema_dict:
+        try:
+            attributes = schema_dict[resource]["block"]["attributes"].keys()
+            nameAttr = [e for e in attributes if name_re.match(e)]
+            bestName = min(nameAttr,key=len)
+            ret[resource] = bestName
+        except Exception as e:
+            print(e)
+            continue
     return ret
 
 def rename_objects(hcl_file,resources,data):

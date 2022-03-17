@@ -4,7 +4,7 @@ sys.path.append('../src')
 from remap import parse_schema
 
 def test_import_aws(file):
-    print(parse_schema(file))
+    parse_schema(file)
     return
 
 
