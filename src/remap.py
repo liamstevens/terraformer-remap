@@ -8,7 +8,7 @@ import ast
 
 #TODO - need to change to use raw string as import - resource type, id, etc.
 class tfResource:
-    def _init__(self, resource_name, identifier, config=None, hcl=None, type=None ):
+    def __init__(self, resource_name, identifier, config=None, hcl=None, type=None ):
         self.resource_name = resource_name
         self.identifier = identifier
         self.type = type
@@ -31,6 +31,9 @@ class tfResource:
     def __str__(self):
         return self.resource_name+"."+self.identifier
 
+    def __repr__(self):
+        return str(self)
+
     def add_config(self,config):
         self.config = config
 
@@ -47,9 +50,8 @@ def reader(path):
     hcl_files = []
     # walk target directory
     for root, dirs, files in os.walk(path):
-        for dir in dirs:
-            for file in os.listdir(dir):
-                if file.endswith(".tf"):
+        for file in files:
+            if file.endswith(".tf") and not file.startswith("provider"):
                     #get all hcl files
                     hcl_files.append(os.path.join(root,file))
     return hcl_files
@@ -67,31 +69,46 @@ def get_objects(files):
     '''
     resource_list = []
     data_list = []
-    blockflag = False
+    output_list = []
+    #blockflag = False
+    level = 0
     configstring = ""
     for each in files:
         contents = open(each, "r").readlines()
         for line in contents:
-            if "resource" in line:
-                blockflag = True
-                hcl_addr = line.split(" ").replace("\"","")
-                resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
-                configstring += hcl_addr[-1]
-            elif "data" in line:
-                blockflag = True
-                hcl_addr = line.split(" ").replace("\"","")
-                resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
-                configstring += hcl_addr[-1]
-            elif line == '}\n':
-                blockflag = False
-                configstring+=line
-                resource_list[-1].add_config(ast.literal_eval(configstring))
-                configstring = ""
-            elif blockflag == True:
-                configstring+=line
-            else:
-                pass
-    return {'resources': resource_list, 'data':data_list}
+            print(line)
+            try:
+                if "resource" in line:
+                    #blockflag = True
+                    hcl_addr = line.replace("\"","").split(" ")
+                    resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
+                    configstring += hcl_addr[-1]
+                elif "data" in line:
+                    #blockflag = True
+                    hcl_addr = line.split(" ").replace("\"","")
+                    data_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
+                    configstring += hcl_addr[-1]
+                elif "output" in line:
+                    hcl_addr = line.replace("\"","").split(" ")
+                    output_list.append(tfResource(hcl_addr[1],"",hcl=each,type=hcl_addr[0]))
+                    configstring += hcl_addr[-1]
+                elif "{" in line:
+                    configstring+=line
+                    level+=1
+                elif "}" in line:
+                    configstring+=line
+                    level-=1
+                elif line == '}\n' and level == 0:
+                    #blockflag = False
+                    configstring+=line
+                    #resource_list[-1].add_config(ast.literal_eval(configstring))
+                    configstring = ""
+                else:
+                    configstring+=line
+            except Exception as e:
+                print("Exception: "+str(e))
+                print(configstring+", "+str(resource_list))
+    return {'resources': resource_list, 'data':data_list, 'outputs':output_list}
 
 def parse_schema(schema_file):
     name_re = re.compile(".*(n|N)ame.*",flags=re.IGNORECASE)
@@ -118,7 +135,7 @@ def parse_schema(schema_file):
             continue
     return ret
 
-def rename_objects(hcl_file,resources,data,parsed_schema):
-        for file in hcl_file:
+def rename_objects(hcl_files,resources,data,parsed_schema):
+        #for file in hcl_files:
 
-    return
+    return False
