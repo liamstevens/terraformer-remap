@@ -7,27 +7,27 @@ import re
 
 #TODO - need to change to use raw string as import - resource type, id, etc.
 class tfResource:
-    def _init__(self, fromaddr, hcl, toaddr=None, type=None ):
-        self.full_from = fromaddr
-        self.full_to = toaddr
+    def _init__(self, resource_name, identifier, config, hcl type=None ):
+        self.resource_name = resource_name
+        self.identifier = identifier
         self.type = type
         self.hcl = hcl
+        self.config = config
         
     
     def generate_moved_block(self):
         self.lines = []
         self.lines.append("moved {\n")
-        self.lines.append("from = "+self.fromaddr+"\n")
-        self.lines.append("to = "+self.toaddr+"\n")
+        self.lines.append("from = "+self.resource_name+"."+self.previous_identifier+"\n")
+        self.lines.append("to = "+self.resource_name+"."+self.identifier+"\n")
         self.lines.append("}\n\n")
 
+    def generate_new_identifier(self,schema):
+        self.previous_identifier = self.identifier
+        self.identifier = self.config[schema[self.resource_name]]
 
     def __str__(self):
-        if type=="resource":
-            self.fromaddr = self.full_from[9:].replace('"','').replace(' ','.')
-        elif type=="data":
-            self.fromaddr = self.full_from[4:].replace('"','').replace(' ','.')
-        self.toaddr = toaddr
+        return self.resource_name+"."+self.identifier
 
 def reader(path):
     hcl_files = []
