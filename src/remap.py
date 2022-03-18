@@ -35,8 +35,16 @@ class tfResource:
         self.config = config
 
 def reader(path):
+    '''
+    Walk the target directory and return a list of Terraform files for processing.
+
+        Parameters:
+            path: string representing path to target directory. May contain many subdir trees.
+
+        Returns:
+            hcl_files: a list of HCL file paths for processing.
+    '''
     hcl_files = []
-    
     # walk target directory
     for root, dirs, files in os.walk(path):
         for dir in dirs:
@@ -44,20 +52,24 @@ def reader(path):
                 if file.endswith(".tf"):
                     #get all hcl files
                     hcl_files.append(os.path.join(root,file))
-                elif file.endswith(".state"):
-                    #get statefile - there should only be one of these
-                    #TODO - figure out wtf I was thinking including these since they are incredibly 
-                    #verbose and may not *actually* be useful for this
-                    hcl_files.append(os.path.join(root,file))
     return hcl_files
 
 
 def get_objects(files):
+    '''
+    Generates lists of tfResource objects, accessed via their object type (Resource vs Data).
+    See class definition for contents of the objects.
+        Parameters:
+            files: a list of file paths to HCL files for extraction.
+        
+        Returns:
+            Dict: {'resources': [tfResource], 'data': [tfResource]}
+    '''
     resource_list = []
     data_list = []
     blockflag = False
     configstring = ""
-    for each in hcl_files:
+    for each in files:
         contents = open(each, "r").readlines()
         for line in contents:
             if "resource" in line:
@@ -79,7 +91,6 @@ def get_objects(files):
                 configstring+=line
             else:
                 pass
-    
     return {'resources': resource_list, 'data':data_list}
 
 def parse_schema(schema_file):
