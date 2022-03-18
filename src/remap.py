@@ -13,12 +13,21 @@ class tfResource:
         self.type = type
         self.hcl = hcl
         self.config = config
-        
+        self.previous_identifier = False
+
+    def __str__(self):
+        return self.resource_name+"."+self.identifier
+
+    def __repr__(self):
+        return str(self)    
     
     def generate_moved_block(self):
         self.lines = []
         self.lines.append("moved {\n")
-        self.lines.append("from = "+self.resource_name+"."+self.previous_identifier+"\n")
+        if self.previous_identifier:
+            self.lines.append("from = "+self.resource_name+"."+self.previous_identifier+"\n")
+        else:
+            return ""
         self.lines.append("to = "+self.resource_name+"."+self.identifier+"\n")
         self.lines.append("}\n\n")
         return self.lines
@@ -27,14 +36,15 @@ class tfResource:
         self.previous_identifier = self.identifier
         self.identifier = self.config[schema[self.resource_name]]
 
-    def __str__(self):
-        return self.resource_name+"."+self.identifier
-
-    def __repr__(self):
-        return str(self)
-
     def add_config(self,config):
         self.config = config
+
+    def get_file(self):
+        return self.hcl
+
+    def get_hcl_addr(self):
+        return self.type+" \""+self.resource_name+"\" \""+self.identifier+"\"\ {\n"
+
 
 def reader(path):
     '''
@@ -69,7 +79,6 @@ def get_objects(files):
     resource_list = []
     data_list = []
     output_list = []
-    #blockflag = False
     level = 0
     configstring = ""
     for each in files:
@@ -135,10 +144,10 @@ def rename_objects(resources,data,outputs,parsed_schema):
     Generate new HCL addresses for each of the objects.
 
         Parameters:
-            resources - list(tfResource)
-            data - list(tfResource)
-            outputs - list(tfResource)
-            parsed_schema - dict(str:str)
+            resources - [tfResource] for resource objects
+            data - [tfResource] for data objects
+            outputs - [tfResource] for output objects 
+            parsed_schema - dict(str:str) of previously parsed schema
         
         Returns:
             Dict: {'resources': [tfResource], 'data': [tfResource], 'outputs': [tfResource]} 
@@ -151,7 +160,31 @@ def rename_objects(resources,data,outputs,parsed_schema):
         o.generate_new_identifier(parsed_schema)
     return {'resources': resources, 'data':data, 'outputs':outputs}
 
-def generate_moved_file(resources,data,outputs):
+
+def group_by_source(objects):
+    groups = {}
+    for e in objects:
+        if e.get_file() not in groups.keys():
+            groups[e.get_file()] = [e]
+        else:
+            groups[e.get_file()].append(e)
+
+def generate_moved_file(resources,data,outputs,dir):
     '''
-    
+    Generate a moved.tf file at the target directory with the requisite HCL for relocated resources.
+
+        Parameters:
+            resources - [tfResource]
+            data - [tfResource]
+            outputs - [tfResource]
+            dir - string of target directory
+        
+        Returns:
+            True on success, False otherwise.
     '''
+    #TODO loop through grouped resources to minimise file IO
+    f = open(os.path.join(dir,'moved.tf'),'w')
+    all = (resources+data+outputs).sort(key=getFile)
+    for e in all:
+        f.write(e.generate_moved_block())
+
