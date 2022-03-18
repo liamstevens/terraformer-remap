@@ -6,7 +6,6 @@ import re
 import ast
 
 
-#TODO - need to change to use raw string as import - resource type, id, etc.
 class tfResource:
     def __init__(self, resource_name, identifier, config=None, hcl=None, type=None ):
         self.resource_name = resource_name
@@ -79,12 +78,10 @@ def get_objects(files):
             print(line)
             try:
                 if "resource" in line:
-                    #blockflag = True
                     hcl_addr = line.replace("\"","").split(" ")
                     resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
                 elif "data" in line:
-                    #blockflag = True
                     hcl_addr = line.split(" ").replace("\"","")
                     data_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
@@ -99,9 +96,7 @@ def get_objects(files):
                     configstring+=line
                     level-=1
                 elif line == '}\n' and level == 0:
-                    #blockflag = False
                     configstring+=line
-                    #resource_list[-1].add_config(ast.literal_eval(configstring))
                     configstring = ""
                 else:
                     configstring+=line
