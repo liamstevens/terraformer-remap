@@ -64,7 +64,7 @@ def get_objects(files):
             files: a list of file paths to HCL files for extraction.
         
         Returns:
-            Dict: {'resources': [tfResource], 'data': [tfResource]}
+            Dict: {'resources': [tfResource], 'data': [tfResource], 'outputs': [tfResource]}
     '''
     resource_list = []
     data_list = []
@@ -106,7 +106,6 @@ def get_objects(files):
     return {'resources': resource_list, 'data':data_list, 'outputs':output_list}
 
 def parse_schema(schema_file):
-    name_re = re.compile(".*(n|N)ame.*",flags=re.IGNORECASE)
     '''
     Parse a Terraform provider schema file for resources and their schema in order to generate resource addresses.
 
@@ -116,6 +115,7 @@ def parse_schema(schema_file):
         Returns:
             schema (dict) - a dict containing a mapping of resource types and their most human-readable attribute field.
     '''
+    name_re = re.compile(".*(n|N)ame.*",flags=re.IGNORECASE)
     ret = {}
     blob = json.load(open(schema_file,'r'))
     schema_dict = {resource:blob["provider_schemas"][provider][schema][resource] for provider in blob["provider_schemas"] for schema in blob["provider_schemas"][provider] for resource in blob["provider_schemas"][provider][schema]}
@@ -130,7 +130,28 @@ def parse_schema(schema_file):
             continue
     return ret
 
-def rename_objects(hcl_files,resources,data,parsed_schema):
-        #for file in hcl_files:
+def rename_objects(resources,data,outputs,parsed_schema):
+    '''
+    Generate new HCL addresses for each of the objects.
 
-    return False
+        Parameters:
+            resources - list(tfResource)
+            data - list(tfResource)
+            outputs - list(tfResource)
+            parsed_schema - dict(str:str)
+        
+        Returns:
+            Dict: {'resources': [tfResource], 'data': [tfResource], 'outputs': [tfResource]} 
+    '''
+    for r in resources:
+        r.generate_new_identifier(parsed_schema)
+    for d in data:
+        d.generate_new_identifier(parsed_schema)
+    for o in outputs:
+        o.generate_new_identifier(parsed_schema)
+    return {'resources': resources, 'data':data, 'outputs':outputs}
+
+def generate_moved_file(resources,data,outputs):
+    '''
+    
+    '''
