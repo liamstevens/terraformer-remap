@@ -3,11 +3,12 @@ import os
 import sys
 import json
 import re
+import ast
 
 
 #TODO - need to change to use raw string as import - resource type, id, etc.
 class tfResource:
-    def _init__(self, resource_name, identifier, config, hcl type=None ):
+    def _init__(self, resource_name, identifier, config=None, hcl=None, type=None ):
         self.resource_name = resource_name
         self.identifier = identifier
         self.type = type
@@ -21,6 +22,7 @@ class tfResource:
         self.lines.append("from = "+self.resource_name+"."+self.previous_identifier+"\n")
         self.lines.append("to = "+self.resource_name+"."+self.identifier+"\n")
         self.lines.append("}\n\n")
+        return self.lines
 
     def generate_new_identifier(self,schema):
         self.previous_identifier = self.identifier
@@ -29,10 +31,12 @@ class tfResource:
     def __str__(self):
         return self.resource_name+"."+self.identifier
 
+    def add_config(self,config):
+        self.config = config
+
 def reader(path):
     hcl_files = []
-    resource_list = []
-    data_list = []
+    
     # walk target directory
     for root, dirs, files in os.walk(path):
         for dir in dirs:
@@ -44,21 +48,39 @@ def reader(path):
                     #get statefile - there should only be one of these
                     #TODO - figure out wtf I was thinking including these since they are incredibly 
                     #verbose and may not *actually* be useful for this
-                    statefile = os.path.join(root,file)
+                    hcl_files.append(os.path.join(root,file))
+    return hcl_files
+
+
+def get_objects(files):
+    resource_list = []
+    data_list = []
+    blockflag = False
+    configstring = ""
     for each in hcl_files:
         contents = open(each, "r").readlines()
         for line in contents:
             if "resource" in line:
-                #take resource, convert identifier to string with identifier syntax
-                #and pass to tfResource initialiser
-                resource_list.append((each,tfResource(line[9:].replace('"','').replace(' ','.'))))
+                blockflag = True
+                hcl_addr = line.split(" ").replace("\"","")
+                resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
+                configstring += hcl_addr[-1]
             elif "data" in line:
-                #Do the same with data objects
-                data_list.append((each,tfResource(line[4:].replace('"','').replace(' ','.'))))
+                blockflag = True
+                hcl_addr = line.split(" ").replace("\"","")
+                resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
+                configstring += hcl_addr[-1]
+            elif line == '}\n':
+                blockflag = False
+                configstring+=line
+                resource_list[-1].add_config(ast.literal_eval(configstring))
+                configstring = ""
+            elif blockflag == True:
+                configstring+=line
             else:
                 pass
     
-    return {'files':hcl_files, 'resources': resource_list, 'data':data_list}
+    return {'resources': resource_list, 'data':data_list}
 
 def parse_schema(schema_file):
     name_re = re.compile(".*(n|N)ame.*",flags=re.IGNORECASE)
