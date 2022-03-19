@@ -22,6 +22,8 @@ class tfResource:
         return str(self)    
     
     def generate_moved_block(self):
+        if self.type == "output":
+            return
         self.lines = []
         self.lines.append("moved {\n")
         if self.previous_identifier:
@@ -33,11 +35,17 @@ class tfResource:
         return self.lines
 
     def generate_new_identifier(self,schema):
-        self.previous_identifier = self.identifier
-        self.identifier = self.config[schema[self.resource_name]]
+        if self.type == "output":
+            return
+        try:
+            self.previous_identifier = self.identifier
+            self.identifier = self.config[schema[self.resource_name]]
+        except Exception as e:
+            print(e)
+            print("Exception:"+str(self.config))
 
     def add_config(self,config):
-        self.config = config
+        self.config = ast.literal_eval(config)
 
     def get_file(self):
         return self.hcl
@@ -81,33 +89,51 @@ def get_objects(files):
     output_list = []
     level = 0
     configstring = ""
+    current_obj = ""
     for each in files:
         contents = open(each, "r").readlines()
         for line in contents:
-            print(line)
             try:
+                
                 if "resource" in line:
                     hcl_addr = line.replace("\"","").split(" ")
                     resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
+                    current_obj = "resource"
                 elif "data" in line:
                     hcl_addr = line.split(" ").replace("\"","")
                     data_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
+                    current_obj = "data"
                 elif "output" in line:
                     hcl_addr = line.replace("\"","").split(" ")
                     output_list.append(tfResource(hcl_addr[1],"",hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
-                elif "{" in line:
+                    current_obj = "output"
+                elif line.startswith('}'):# and level == 0:
+                    configstring+=line
+                    if current_obj == "resource":
+                        resource_list[-1].add_config(configstring)
+                    elif current_obj == "data":
+                        data_list[-1].add_config(configstring)
+                    elif current_obj ==  "output":
+                        output_list[-1].add_config(configstring)
+                    configstring = ""
+                    current_obj = ""
+                elif "{" == line.strip():
                     configstring+=line
                     level+=1
-                elif "}" in line:
+                elif "}" == line.strip():
                     configstring+=line
                     level-=1
-                elif line == '}\n' and level == 0:
-                    configstring+=line
-                    configstring = ""
                 else:
+                    #print(line)
+                    line = line.strip().split(' ')
+                    if len(line[0])>0:
+                        line[0] = "\""+line[0]+"\""
+                    if len(line[-1])>0:
+                        line[-1] = "\""+line[-1]+"\""
+                    line = ' '.join(line).replace('=',':')
                     configstring+=line
             except Exception as e:
                 print("Exception: "+str(e))
@@ -135,7 +161,7 @@ def parse_schema(schema_file):
             bestName = min(nameAttr,key=len)
             ret[resource] = bestName
         except Exception as e:
-            print(e," "+resource)
+            #print(e," "+resource)
             continue
     return ret
 
@@ -162,29 +188,42 @@ def rename_objects(resources,data,outputs,parsed_schema):
 
 
 def group_by_source(objects):
+    '''
+    Group HCL objects by source file.
+
+        Parameters:
+            objects - [tfResource]
+        
+        Returns:
+            dict with keys of files and value of list of tfResources contained in the file.
+    '''
     groups = {}
     for e in objects:
         if e.get_file() not in groups.keys():
             groups[e.get_file()] = [e]
         else:
             groups[e.get_file()].append(e)
+    return groups
 
-def generate_moved_file(resources,data,outputs,dir):
+def generate_moved_file(resources,dir):
     '''
     Generate a moved.tf file at the target directory with the requisite HCL for relocated resources.
 
         Parameters:
-            resources - [tfResource]
-            data - [tfResource]
-            outputs - [tfResource]
+            resources - dict with keys of files and value of list of tfResources contained in the file.
             dir - string of target directory
         
         Returns:
             True on success, False otherwise.
     '''
-    #TODO loop through grouped resources to minimise file IO
-    f = open(os.path.join(dir,'moved.tf'),'w')
-    all = (resources+data+outputs).sort(key=getFile)
-    for e in all:
-        f.write(e.generate_moved_block())
+    try:
+        f = open(os.path.join(dir,'moved.tf'),'w')
+        all = resources
+        for e in all:
+            for res in all[e]:
+                f.write(res.generate_moved_block())
+        f.close()
+        return True
+    except Exception as e:
+        return False
 
