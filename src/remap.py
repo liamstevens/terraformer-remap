@@ -42,10 +42,32 @@ class tfResource:
             self.identifier = self.config[schema[self.resource_name]]
         except Exception as e:
             print(e)
-            print("Exception:"+str(self.config))
+            #print("Exception:"+str(self.config))
 
     def add_config(self,config):
-        self.config = ast.literal_eval(config)
+        config = config.split('\n')
+        tconf = ""
+        #convert config to valid dict literal
+        for line in config:
+            line = line.strip()
+            if len(line) > 0:#and "}" not in line:
+                elements = line.split()
+                for e in elements:
+                    if not any(s in e for s in ("{", "}", '=','\n',',')):
+                        if not e.startswith("\"") and not e.endswith("\""):
+                            tconf+="\""+e+"\""
+                        else:
+                            tconf+=e+","
+                    elif '=' in e:
+                        tconf += ':' 
+                    else:
+                        print("")
+                        tconf += e
+            else:
+                tconf+=line
+        print("tconf: "+tconf)
+        self.config = ast.literal_eval(tconf)
+        print(self.config)
 
     def get_file(self):
         return self.hcl
@@ -96,17 +118,17 @@ def get_objects(files):
             try:
                 
                 if "resource" in line:
-                    hcl_addr = line.replace("\"","").split(" ")
+                    hcl_addr = line.replace("\"","").split()
                     resource_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
                     current_obj = "resource"
                 elif "data" in line:
-                    hcl_addr = line.split(" ").replace("\"","")
+                    hcl_addr = line.split().replace("\"","")
                     data_list.append(tfResource(hcl_addr[1],hcl_addr[2],hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
                     current_obj = "data"
                 elif "output" in line:
-                    hcl_addr = line.replace("\"","").split(" ")
+                    hcl_addr = line.replace("\"","").split()
                     output_list.append(tfResource(hcl_addr[1],"",hcl=each,type=hcl_addr[0]))
                     configstring += hcl_addr[-1]
                     current_obj = "output"
@@ -124,20 +146,13 @@ def get_objects(files):
                     configstring+=line
                     level+=1
                 elif "}" == line.strip():
-                    configstring+=line
+                    configstring+=line+", "
                     level-=1
                 else:
-                    #print(line)
-                    line = line.strip().split(' ')
-                    if len(line[0])>0:
-                        line[0] = "\""+line[0]+"\""
-                    if len(line[-1])>0:
-                        line[-1] = "\""+line[-1]+"\""
-                    line = ' '.join(line).replace('=',':')
                     configstring+=line
             except Exception as e:
                 print("Exception: "+str(e))
-                print(configstring+", "+str(resource_list))
+                #print(configstring+", "+str(resource_list))
     return {'resources': resource_list, 'data':data_list, 'outputs':output_list}
 
 def parse_schema(schema_file):
