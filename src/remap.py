@@ -233,10 +233,9 @@ def generate_moved_file(resources,dir):
     '''
     try:
         f = open(os.path.join(dir,'moved.tf'),'w')
-        all = resources
-        for e in all:
-            for res in all[e]:
-                f.write(res.generate_moved_block())
+        for e in resources:
+            for res in resources[e]:
+                f.writelines(res.generate_moved_block())
         f.close()
         return True
     except Exception as e:
